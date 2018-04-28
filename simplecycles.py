@@ -81,7 +81,7 @@ def makeNXDigraph(domaingraph,nodes=None,edges=None):
     # add nodes and edges to digraph
     G = NX.DiGraph()
     G.add_nodes_from(nodes)
-    for edge,label in edgelabels.iteritems(): G.add_edge(edge[0],edge[1],label=label)
+    for edge,label in edgelabels.items(): G.add_edge(edge[0],edge[1],label=label)
     return G
 
 
@@ -140,7 +140,7 @@ def findAllOrderedExtrema_Morsesets(networkfile=None,networkspec=None):
     start = time.time()
     for paramind in range(paramgraph.size()):
         if time.time()-start >= 2:
-            print "{} / {} parameters analyzed\n".format(paramind,paramgraph.size())
+            print("{} / {} parameters analyzed\n".format(paramind,paramgraph.size()))
             start = time.time()
         domaingraph = DSGRN.DomainGraph(paramgraph.parameter(paramind))
         morsedecomposition = DSGRN.MorseDecomposition(domaingraph.digraph())
@@ -150,82 +150,96 @@ def findAllOrderedExtrema_Morsesets(networkfile=None,networkspec=None):
         for i in range(0,morsedecomposition.poset().size()):
             ms = morsedecomposition.morseset(i)
             if len(ms) > 1 and morsegraph.annotation(i)[0] == "FC" and len(poset.children(i)) == 0:
-                # print i
-                # print morsegraph.annotation(i)
-                # print morsegraph.poset()
                 morseedges = [ (j,a) for j in ms for a in domaingraph.digraph().adjacencies(j) if a in ms ]
                 digraph = makeNXDigraph(domaingraph,ms,morseedges)
-                print "Nodes: {}".format(digraph.number_of_nodes())
-                print "Edges: {}".format(digraph.size())
-                # print "\n"
+                print("Nodes: {}".format(digraph.number_of_nodes()))
+                print("Edges: {}".format(digraph.size()))
                 cycles = findCycles(digraph)
-                print "Have cycles."
+                print("Have cycles.")
                 k = 0
                 for c in cycles: k+=1
-                print "Number cycles: {}".format(k)
+                print("Number cycles: {}".format(k))
                 sys.exit()
                 # debugging try-except block
                 try: 
                     C = max(len(c)-1 for c in cycles)
                     if C > len(ms):
-                        print "morse set: {}, max cycle: {}".format(len(ms),C)
+                        print("morse set: {}, max cycle: {}".format(len(ms),C))
                         raise ValueError("Nodes in cycle exceeds nodes in Morse set.")
                 except: pass
                 extrema  = orderedExtrema(names,cycles)
                 paths = removeCyclicPermutations(extrema,paths)
-                print paths
+                print(paths)
                 sys.stdout.flush()
-
-        # if len(paths) > 10000:
-        #     # for p in paths:
-        #     #     print p
-        #     print "\n\n"
-        #     print len(paths)
-        #     print "\n\n"
-        #     print len(mastercycles)
-        #     print "\n\n"
-        #     print max([len(p) for p in paths])
-        #     sys.exit()  
     return set(paths)
+
+def findAllOrderedExtremaDomainGraph(paramlist=None,networkfile=None,networkspec=None):
+    if networkfile:
+        network = DSGRN.Network(networkfile)
+    elif networkspec:
+        network = DSGRN.Network()
+        network.assign(networkspec)
+    else:
+        raise ValueError("No input network.")
+    names = [network.name(i) for i in range(network.size())]
+    paramgraph = DSGRN.ParameterGraph(network)
+    paths = []
+    start = time.time()
+    if not paramlist:
+        paramlist=range(paramgraph.size())
+    for paramind in paramlist:
+        if time.time()-start >= 2:
+            print("{} / {} parameters analyzed\n".format(paramind,paramgraph.size()))
+            start = time.time()
+        domaingraph = DSGRN.DomainGraph(paramgraph.parameter(paramind))
+        digraph = makeNXDigraph(domaingraph)
+        cycles = findCycles(digraph)
+        extrema  = orderedExtrema(names,cycles)
+        p = removeCyclicPermutations(extrema,set([]))
+        paths.append(list(p))
+    return paths
 
 def test_multiple_extrema():
     names = ['x','y','z']
     extrema = ('x max','y max','z min','y max','x min','y min','z max')
-    # print separateMultipleOrders(names,extrema_list)
-    print set(separateMultipleOrders(names,extrema)) == set([('x max','z min','y max','x min','y min','z max'),('x max','y max','z min','x min','y min','z max')])
+    print(set(separateMultipleOrders(names,extrema)) == set([('x max','z min','y max','x min','y min','z max'),('x max','y max','z min','x min','y min','z max')]))
 
     extrema = ('x max','y max','z min','y max','x min','x min', 'y min','z max')
     # print separateMultipleOrders(names,extrema_list)
-    print set(separateMultipleOrders(names,extrema)) == set([('x max','z min','y max','x min','y min','z max'),('x max','y max','z min','x min','y min','z max')])
+    print(set(separateMultipleOrders(names,extrema)) == set([('x max','z min','y max','x min','y min','z max'),('x max','y max','z min','x min','y min','z max')]))
 
 
     extrema = ('x max','y max','z min','y max','x min','x min', 'y min', 'x min', 'z max')
     # print separateMultipleOrders(names,extrema_list)
-    print set(separateMultipleOrders(names,extrema)) == set([('x max','z min','y max','x min','y min','z max'),('x max','z min','y max','y min','x min','z max'),('x max','y max','z min','x min','y min','z max'),('x max','y max','z min','y min','x min','z max')])
+    print(set(separateMultipleOrders(names,extrema)) == set([('x max','z min','y max','x min','y min','z max'),('x max','z min','y max','y min','x min','z max'),('x max','y max','z min','x min','y min','z max'),('x max','y max','z min','y min','x min','z max')]))
 
 
 if __name__ == "__main__":
-    netspec0 = "X : ~Z\nY : ~X\nZ : ~Y"
-    netspec1 = "x1 : ~z1 : E\ny1 : ~x1 : E\nz1 : ~y1 : E\nx2 : ~z2 : E\ny2 : (~x1)(~x2) : E\nz2 : ~y2 : E"
-    netspec2 = "x1 : ~z1 : E\ny1 : (~x1)(~x2) : E\nz1 : ~y1 : E\nx2 : ~z2 : E\ny2 : (~x1)(~x2) : E\nz2 : ~y2 : E"
-    netspec3 = "x1 : ~z1 : E\ny : (~x1)(~x2) : E\nz1 : ~y : E\nx2 : ~z2 : E\nz2 : ~y : E"
-    netspec4 = "X : (~Z)(Y) : E\nY : ~X : E\nZ : ~Y : E"
+    # netspec0 = "X : ~Z\nY : ~X\nZ : ~Y"
+    # netspec1 = "x1 : ~z1 : E\ny1 : ~x1 : E\nz1 : ~y1 : E\nx2 : ~z2 : E\ny2 : (~x1)(~x2) : E\nz2 : ~y2 : E"
+    # netspec2 = "x1 : ~z1 : E\ny1 : (~x1)(~x2) : E\nz1 : ~y1 : E\nx2 : ~z2 : E\ny2 : (~x1)(~x2) : E\nz2 : ~y2 : E"
+    # netspec3 = "x1 : ~z1 : E\ny : (~x1)(~x2) : E\nz1 : ~y : E\nx2 : ~z2 : E\nz2 : ~y : E"
+    # netspec4 = "X : (~Z)(Y) : E\nY : ~X : E\nZ : ~Y : E"
 
-    num = sys.argv[1]
-    ns = eval("netspec" + num)
-    print "\n" + ns + "\n\n"
-    sys.stdout.flush()
+    # num = sys.argv[1]
+    # ns = eval("netspec" + num)
+    # print "\n" + ns + "\n\n"
+    # sys.stdout.flush()
 
-    # for c in list(findAllOrderedExtrema_Morsesets(networkspec=ns))[:6]:
-    #     print c
+    # # for c in list(findAllOrderedExtrema_Morsesets(networkspec=ns))[:6]:
+    # #     print c
 
-    orders = findAllOrderedExtrema_Morsesets(networkspec=ns)
-    print len(orders)
-    for o in sorted(list(orders)):
-        print o
+    # orders = findAllOrderedExtrema_Morsesets(networkspec=ns)
+    # print len(orders)
+    # for o in sorted(list(orders)):
+    #     print o
 
-    # test_multiple_extrema()
+    # # test_multiple_extrema()
 
+    paths = findAllOrderedExtremaDomainGraph(paramlist = [5,9,19,23,30,38,44,52],networkfile="syn_net_5D_20180425.txt")
 
+    import json
+    D = dict(zip([5,9,19,23,30,38,44,52],paths))
+    json.dump(D,open("syn_net_5D_20180425_cycles.json","w"))
     
 
